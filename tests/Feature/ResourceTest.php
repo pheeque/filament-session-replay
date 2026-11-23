@@ -100,7 +100,7 @@ it('badges, filters and names the milestones a recording reached', function () {
     $page = fn (string $path): array => ['type' => 'navigation', 'label' => $path, 'at' => $now];
 
     $browsed = $this->recording(markers: [$page('/pricing/compare'), $page('/pricing_old')]);
-    $looked = $this->recording(markers: [$page('/pricing')]);
+    $looked = $this->recording(markers: [$page('/pricing?plan=pro')]);
     $paid = $this->recording(markers: [$page('/pricing'), $page('/checkout/success/42')]);
     // A paid path that is not a page view: a failed request to it reached nothing.
     $failed = $this->recording(markers: [['type' => 'request', 'label' => '/thanks', 'at' => $now]]);

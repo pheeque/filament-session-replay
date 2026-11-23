@@ -634,7 +634,8 @@ class ReplaySessionResource extends Resource
     }
 
     /**
-     * Page views of any of the paths, `*` standing for any part; a page's marker is labelled with its path.
+     * Page views of any of the paths, `*` standing for any part. A page's marker is labelled with its path and query,
+     * so a path matches with any query after it too.
      *
      * @param  Builder<ReplayMarker>  $markers
      * @param  list<string>  $paths
@@ -644,7 +645,9 @@ class ReplaySessionResource extends Resource
     {
         return $markers->where('type', 'navigation')->where(function (Builder $markers) use ($paths): void {
             foreach ($paths as $path) {
-                $markers->orWhere('label', 'like', str_replace('*', '%', addcslashes($path, '%_\\')));
+                $pattern = str_replace('*', '%', addcslashes($path, '%_\\'));
+
+                $markers->orWhere('label', 'like', $pattern)->orWhere('label', 'like', $pattern.'?%');
             }
         });
     }
