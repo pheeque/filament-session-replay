@@ -3,6 +3,7 @@
 namespace Packstub\SessionReplay\Filament\Resources\ReplaySessions;
 
 use BackedEnum;
+use Closure;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -565,10 +566,10 @@ class ReplaySessionResource extends Resource
                 SelectFilter::make('milestone')
                     ->label(__('Reached'))
                     ->options(fn (): array => array_combine(array_keys(SessionReplayPlugin::get()->getMilestones()), array_keys(SessionReplayPlugin::get()->getMilestones())))
-                    ->query(fn (Builder $query, array $data) => $query->when(
-                        SessionReplayPlugin::get()->getMilestones()[$data['value'] ?? ''] ?? null,
-                        fn (Builder $query, array $paths) => $query->whereHas('markers', fn (Builder $markers) => static::visited($markers, $paths)),
-                    ))
+                    // Not when(): it would call a closure milestone as the condition.
+                    ->query(fn (Builder $query, array $data) => ($milestone = SessionReplayPlugin::get()->getMilestones()[$data['value'] ?? ''] ?? null) === null
+                        ? $query
+                        : static::reached($query, $milestone))
                     ->visible(fn (): bool => SessionReplayPlugin::get()->getMilestones() !== []),
                 Filter::make('impersonated')->label(__('Impersonated'))->toggle()->query(fn (Builder $query) => $query->whereNotNull('impersonator_id')),
                 Filter::make('pinned')->label(__('Pinned'))->toggle()->query(fn (Builder $query) => $query->where('pinned', true)),
@@ -602,17 +603,35 @@ class ReplaySessionResource extends Resource
 
     /**
      * One exists per milestone, as `milestone_<n>` in the plugin's order: the list badges every row without a query of its own.
+     * A closure milestone runs on the same recording under the `reached` alias, so its columns may name either table.
      *
      * @param  Builder<ReplaySession>  $query
      * @return Builder<ReplaySession>
      */
     public static function withMilestones(Builder $query): Builder
     {
-        foreach (array_values(SessionReplayPlugin::get()->getMilestones()) as $index => $paths) {
-            $query->withExists(["markers as milestone_{$index}" => fn (Builder $markers) => static::visited($markers, $paths)]);
+        foreach (array_values(SessionReplayPlugin::get()->getMilestones()) as $index => $milestone) {
+            if ($milestone instanceof Closure) {
+                $table = $query->getModel()->getTable();
+                $query->when($query->getQuery()->columns === null, fn (Builder $query) => $query->select("{$table}.*"))->selectSub(static::reached(ReplaySession::query()->from($table, 'reached')->selectRaw('1')->whereColumn('reached.id', "{$table}.id")->limit(1), $milestone), "milestone_{$index}");
+            } else {
+                $query->withExists(["markers as milestone_{$index}" => fn (Builder $markers) => static::visited($markers, $milestone)]);
+            }
         }
 
         return $query;
+    }
+
+    /**
+     * @param  Builder<ReplaySession>  $sessions
+     * @param  list<string>|Closure  $milestone
+     * @return Builder<ReplaySession>
+     */
+    protected static function reached(Builder $sessions, array|Closure $milestone): Builder
+    {
+        return $milestone instanceof Closure
+            ? $sessions->where(fn (Builder $sessions) => $milestone($sessions))
+            : $sessions->whereHas('markers', fn (Builder $markers) => static::visited($markers, $milestone));
     }
 
     /**

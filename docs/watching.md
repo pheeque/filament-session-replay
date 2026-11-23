@@ -55,6 +55,14 @@ SessionReplayPlugin::make()
 
 Each milestone is a label and one path or several, matched against the recording's page views (`wire:navigate` swaps included) by path, without the host or the query. `*` stands for any part. Only page views count: a request to `/thanks` that a page made reaches nothing.
 
+A milestone that is not a page, such as having paid before, is a closure that narrows the recordings to the ones that reached it. It runs inside the list's query, so the badge costs no query per row:
+
+```php
+->milestones([
+    'Customer' => fn (Builder $sessions) => $sessions->whereIn('user_id', Order::query()->select('user_id')),
+])
+```
+
 ### Row actions
 
 **Watch** opens the watch page. **Pin** / **Unpin** keeps a recording out of pruning. **Delete** removes the recording, its chunks, its markers and its files on the disk. Delete is also available as a bulk action.

@@ -119,6 +119,31 @@ it('badges, filters and names the milestones a recording reached', function () {
     expect(ReplaySessionResource::reachedMilestones(ReplaySession::query()->findOrFail($looked->id)))->toBe(['Pricing']);
 });
 
+it('badges and filters a milestone the panel decides with a query', function () {
+    Gate::define('viewSessionReplay', fn ($user) => true);
+    $buyer = $this->user(['is_staff' => true]);
+    SessionReplayPlugin::get()->milestones([
+        'Pricing' => '/pricing',
+        'Bought before' => fn (Builder $sessions) => $sessions->whereIn('user_id', User::query()->where('is_staff', true)->select('id')),
+    ]);
+
+    $page = ['type' => 'navigation', 'label' => '/pricing', 'at' => now()->getTimestampMs()];
+    $returning = $this->recording($buyer, markers: [$page]);
+    $earlier = $this->recording($buyer);
+    $first = $this->recording(markers: [$page]);
+
+    $this->actingAs($this->user());
+
+    Livewire::test(ListReplaySessions::class)
+        ->assertCanSeeTableRecords([$returning, $earlier, $first])
+        ->assertTableColumnStateSet('milestones', ['Pricing', 'Bought before'], $returning)
+        ->assertTableColumnStateSet('milestones', ['Bought before'], $earlier)
+        ->assertTableColumnStateSet('milestones', ['Pricing'], $first)
+        ->filterTable('milestone', 'Bought before')->assertCanSeeTableRecords([$returning, $earlier])->assertCanNotSeeTableRecords([$first]);
+
+    $this->get(ReplaySessionResource::getUrl('view', ['record' => $earlier]))->assertOk()->assertSeeInOrder(['Milestones', 'Bought before']);
+});
+
 it('leaves the milestones out until the panel names some', function () {
     Gate::define('viewSessionReplay', fn ($user) => true);
     $session = $this->recording(markers: [['type' => 'navigation', 'label' => '/pricing', 'at' => now()->getTimestampMs()]]);

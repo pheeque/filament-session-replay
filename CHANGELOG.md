@@ -5,6 +5,7 @@ All notable changes to `packstub/filament-session-replay` are documented here.
 ## Unreleased
 
 - **Milestones:** `->milestones(['Paid' => '/checkout/success*'])` badges the recordings that reached those pages, adds a **Reached** filter, and names them on the watch page
+- **Milestones from a query:** a milestone may be a closure on the recordings' query, for facts that are not a page, such as having paid before
 
 ## 1.2.0 — 2026-11-20
 

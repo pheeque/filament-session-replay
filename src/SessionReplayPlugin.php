@@ -46,7 +46,7 @@ class SessionReplayPlugin implements Plugin
     /** @var list<string> */
     protected array $searchPeopleBy = ['name', 'email'];
 
-    /** @var array<string, list<string>> */
+    /** @var array<string, list<string>|Closure> */
     protected array $milestones = [];
 
     protected string|UnitEnum|null $navigationGroup = null;
@@ -170,14 +170,15 @@ class SessionReplayPlugin implements Plugin
 
     /**
      * Pages worth knowing a person reached, as a label and the page's path (or several), with `*` for any part:
-     * ['Pricing' => '/pricing', 'Paid' => '/checkout/success*']. The list badges the recordings that reached them
-     * and filters by them, and the watch page names them.
+     * ['Pricing' => '/pricing', 'Paid' => '/checkout/success*']. A milestone that is not a page is a closure that
+     * narrows the recordings to the ones that reached it: fn (Builder $sessions) => $sessions->where(...).
+     * The list badges the recordings that reached them and filters by them, and the watch page names them.
      *
-     * @param  array<string, string|list<string>>  $milestones
+     * @param  array<string, string|list<string>|Closure>  $milestones
      */
     public function milestones(array $milestones): static
     {
-        $this->milestones = array_map(fn (string|array $paths): array => array_values((array) $paths), $milestones);
+        $this->milestones = array_map(fn (string|array|Closure $paths): array|Closure => $paths instanceof Closure ? $paths : array_values((array) $paths), $milestones);
 
         return $this;
     }
@@ -433,7 +434,7 @@ class SessionReplayPlugin implements Plugin
         return $this->searchPeopleBy;
     }
 
-    /** @return array<string, list<string>> */
+    /** @return array<string, list<string>|Closure> */
     public function getMilestones(): array
     {
         return $this->milestones;
