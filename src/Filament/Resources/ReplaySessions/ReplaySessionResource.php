@@ -448,9 +448,9 @@ class ReplaySessionResource extends Resource
         return $table
             // The Workspace column names every row's tenant: one query per tenant type instead of one per row;
             // the Reported badge is one exists per row, not a query.
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query
+            ->modifyQueryUsing(fn (Builder $query): Builder => static::withMilestones($query
                 ->withExists(['markers as reported' => fn (Builder $markers) => $markers->where('type', ReplayMarker::REPORT)])
-                ->when(static::listsEveryWorkspace(), fn (Builder $query) => $query->with('tenant')))
+                ->when(static::listsEveryWorkspace(), fn (Builder $query) => $query->with('tenant'))))
             ->defaultSort('started_at', 'desc')
             ->columns([
                 TextColumn::make('user_id')
@@ -483,6 +483,14 @@ class ReplaySessionResource extends Resource
                     ->badge()
                     ->color(fn (int $state): string => $state > 0 ? 'danger' : 'gray')
                     ->sortable(),
+                TextColumn::make('milestones')
+                    ->label(__('Milestones'))
+                    ->state(fn (ReplaySession $record): array => static::reachedMilestones($record))
+                    ->badge()
+                    ->color('success')
+                    ->placeholder('·')
+                    ->visible(fn (): bool => SessionReplayPlugin::get()->getMilestones() !== [])
+                    ->toggleable(),
                 TextColumn::make('reported')
                     ->label(__('Reported'))
                     ->badge()
@@ -554,6 +562,14 @@ class ReplaySessionResource extends Resource
                 Filter::make('poor_vitals')->label(__('Slow pages (poor vitals)'))->toggle()->query(fn (Builder $query) => $query->poorVitals()),
                 Filter::make('reported')->label(__('Reported a problem'))->toggle()->query(fn (Builder $query) => $query->reported()),
                 Filter::make('rage_clicks')->label(__('Rage clicks'))->toggle()->query(fn (Builder $query) => $query->where('rage_click_count', '>', 0)),
+                SelectFilter::make('milestone')
+                    ->label(__('Reached'))
+                    ->options(fn (): array => array_combine(array_keys(SessionReplayPlugin::get()->getMilestones()), array_keys(SessionReplayPlugin::get()->getMilestones())))
+                    ->query(fn (Builder $query, array $data) => $query->when(
+                        SessionReplayPlugin::get()->getMilestones()[$data['value'] ?? ''] ?? null,
+                        fn (Builder $query, array $paths) => $query->whereHas('markers', fn (Builder $markers) => static::visited($markers, $paths)),
+                    ))
+                    ->visible(fn (): bool => SessionReplayPlugin::get()->getMilestones() !== []),
                 Filter::make('impersonated')->label(__('Impersonated'))->toggle()->query(fn (Builder $query) => $query->whereNotNull('impersonator_id')),
                 Filter::make('pinned')->label(__('Pinned'))->toggle()->query(fn (Builder $query) => $query->where('pinned', true)),
                 SelectFilter::make('device')->label(__('Device'))->options(['desktop' => __('Desktop'), 'tablet' => __('Tablet'), 'mobile' => __('Mobile')]),
@@ -582,6 +598,55 @@ class ReplaySessionResource extends Resource
             ->emptyStateHeading(__('No recordings yet'))
             ->emptyStateDescription(__('Recordings appear here as soon as someone uses a recorded page.'))
             ->emptyStateIcon(Heroicon::OutlinedPlayCircle);
+    }
+
+    /**
+     * One exists per milestone, as `milestone_<n>` in the plugin's order: the list badges every row without a query of its own.
+     *
+     * @param  Builder<ReplaySession>  $query
+     * @return Builder<ReplaySession>
+     */
+    public static function withMilestones(Builder $query): Builder
+    {
+        foreach (array_values(SessionReplayPlugin::get()->getMilestones()) as $index => $paths) {
+            $query->withExists(["markers as milestone_{$index}" => fn (Builder $markers) => static::visited($markers, $paths)]);
+        }
+
+        return $query;
+    }
+
+    /**
+     * The labels of the milestones the recording reached, from withMilestones() when the row came with it.
+     *
+     * @internal The column and the watch page's entry.
+     *
+     * @return list<string>
+     */
+    public static function reachedMilestones(ReplaySession $record): array
+    {
+        $labels = array_keys(SessionReplayPlugin::get()->getMilestones());
+
+        if ($labels !== [] && ! array_key_exists('milestone_0', $record->getAttributes())) {
+            $record = static::withMilestones(ReplaySession::query()->whereKey($record->getKey()))->first() ?? $record;
+        }
+
+        return array_values(array_filter($labels, fn (string $label, int $index): bool => (bool) $record->getAttribute("milestone_{$index}"), ARRAY_FILTER_USE_BOTH));
+    }
+
+    /**
+     * Page views of any of the paths, `*` standing for any part; a page's marker is labelled with its path.
+     *
+     * @param  Builder<ReplayMarker>  $markers
+     * @param  list<string>  $paths
+     * @return Builder<ReplayMarker>
+     */
+    protected static function visited(Builder $markers, array $paths): Builder
+    {
+        return $markers->where('type', 'navigation')->where(function (Builder $markers) use ($paths): void {
+            foreach ($paths as $path) {
+                $markers->orWhere('label', 'like', str_replace('*', '%', addcslashes($path, '%_\\')));
+            }
+        });
     }
 
     /**

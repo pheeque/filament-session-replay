@@ -2,6 +2,10 @@
 
 All notable changes to `packstub/filament-session-replay` are documented here.
 
+## Unreleased
+
+- **Milestones:** `->milestones(['Paid' => '/checkout/success*'])` badges the recordings that reached those pages, adds a **Reached** filter, and names them on the watch page
+
 ## 1.2.0 — 2026-11-20
 
 **Introducing Assist in your panel: live help, right on the visitor's page.** Your support team no longer only watches what happened: from the Sessions resource they see who is asking for help, join them live, point, draw and, when the visitor allows it, take control, talk or share a screen, all without leaving Filament. The call runs on [Filament Holler](https://github.com/packstub/filament-holler), so the live view sits right beside the Holler widget your panel already knows.

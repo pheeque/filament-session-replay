@@ -18,6 +18,7 @@ Newest first (`started_at`, descending).
 | **Vitals** | Good, Needs improvement or Poor: the worst rating among the measured LCP, INP and CLS, with the values in the tooltip. |
 | **Device** | Desktop, Tablet or Mobile. Toggleable. |
 | **First page** | The entry URL without the scheme, full URL in the tooltip. Toggleable. |
+| **Milestones** | A badge for each milestone the recording reached (see [Milestones](#milestones)). Visible once the panel names some. Toggleable. |
 | **Reported** | A badge on recordings where the person reported a problem (`SessionReplay.send()`). Toggleable. |
 | **Pinned** | A bookmark icon on pinned recordings. Toggleable. |
 | **Size** | As stored (gzip). Hidden by default, sortable. |
@@ -31,6 +32,7 @@ Newest first (`started_at`, descending).
 | **Slow pages (poor vitals)** | `poor_vitals` | Toggle. LCP above 4000 ms, INP above 500 ms or CLS above 0.25. |
 | **Rage clicks** | `rage_clicks` | Toggle. At least one rage click. |
 | **Reported a problem** | `reported` | Toggle. Recordings where the person pressed a "report a problem" button (`SessionReplay.send()`); the **Reported** column badges them. |
+| **Reached** | `milestone` | Select, once the panel names milestones: recordings that reached that one, for example `->filterTable('milestone', 'Paid')`. |
 | **Impersonated** | `impersonated` | Toggle. Recordings made while someone was impersonating. |
 | **Pinned** | `pinned` | Toggle. |
 | **Device** | `device` | Select: Desktop, Tablet, Mobile. |
@@ -38,6 +40,20 @@ Newest first (`started_at`, descending).
 | **From / Until** | `started` | Two dates on `started_at`. |
 
 The filter names are what you use in a URL or a test, for example `->filterTable('poor_vitals')`. In a URL the filters sit under `filters`, so `?filters[person][id]=7` opens the list for person 7; `ReplaySessionResource::getUrlForPerson($user)` builds that URL for you (the current panel and workspace, or the ones you pass).
+
+### Milestones
+
+Name the pages worth knowing a person reached, and the list badges the recordings that reached them, filters by them, and the watch page lists them with the facts:
+
+```php
+SessionReplayPlugin::make()
+    ->milestones([
+        'Pricing' => '/pricing',
+        'Paid' => ['/checkout/success*', '/thanks'],
+    ])
+```
+
+Each milestone is a label and one path or several, matched against the recording's page views (`wire:navigate` swaps included) by path, without the host or the query. `*` stands for any part. Only page views count: a request to `/thanks` that a page made reaches nothing.
 
 ### Row actions
 
@@ -47,7 +63,7 @@ The filter names are what you use in a URL or a test, for example `->filterTable
 
 The title is the person, the subheading the start time.
 
-- **The facts**: length (with a badge while live), pages, errors, vitals (`LCP 1840 ms · INP 96 ms · CLS 0.020`), device and viewport, size, who impersonated (when someone did), the first page (copyable), and a note when the recording reached `ingest.max_session_mb` and was cut short.
+- **The facts**: length (with a badge while live), pages, errors, the milestones reached (when the panel names some), vitals (`LCP 1840 ms · INP 96 ms · CLS 0.020`), device and viewport, size, who impersonated (when someone did), the first page (copyable), and a note when the recording reached `ingest.max_session_mb` and was cut short.
 - **The player**: the core's `<x-session-replay::player>` inside a `wire:ignore` wrapper, so a Livewire re-render of the page leaves it alone. Play, speed (1x to 8x), skip inactivity and fullscreen. Markers are drawn on the timeline in their colour.
 - **The marker list** next to the player: one chip per kind of marker with its count (Page, Error, Request, Console, Rage click, Vital, Custom, Report) to show or hide that kind, and the markers themselves with their time. A click seeks to a second before the moment and opens the marker's details under the list (a server error's exception, status and path with **Copy report id** and, with `SessionReplay::logUrlUsing()` in the app, **Open in logs**; a failed request's status and URL; where a rage click happened). Vitals start hidden. **Copy link to this moment** under the controller copies the page's URL with `?t=` at the second the replay is at.
 

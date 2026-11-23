@@ -86,5 +86,7 @@
     "Over": "Завершено",
     "No live view": "Нет живого просмотра",
     "Starting a call from the Holler widget ends this assist. Put it on hold first to keep it.": "Звонок из виджета Holler завершит эту помощь. Сначала поставьте её на удержание, чтобы сохранить.",
-    "Nothing yet.": "Пока ничего."
+    "Nothing yet.": "Пока ничего.",
+    "Milestones": "Этапы",
+    "Reached": "Достигнуто"
 }

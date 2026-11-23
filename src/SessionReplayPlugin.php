@@ -46,6 +46,9 @@ class SessionReplayPlugin implements Plugin
     /** @var list<string> */
     protected array $searchPeopleBy = ['name', 'email'];
 
+    /** @var array<string, list<string>> */
+    protected array $milestones = [];
+
     protected string|UnitEnum|null $navigationGroup = null;
 
     protected string|BackedEnum|null $navigationIcon = null;
@@ -161,6 +164,20 @@ class SessionReplayPlugin implements Plugin
     public function searchPeopleBy(array $columns): static
     {
         $this->searchPeopleBy = array_values($columns);
+
+        return $this;
+    }
+
+    /**
+     * Pages worth knowing a person reached, as a label and the page's path (or several), with `*` for any part:
+     * ['Pricing' => '/pricing', 'Paid' => '/checkout/success*']. The list badges the recordings that reached them
+     * and filters by them, and the watch page names them.
+     *
+     * @param  array<string, string|list<string>>  $milestones
+     */
+    public function milestones(array $milestones): static
+    {
+        $this->milestones = array_map(fn (string|array $paths): array => array_values((array) $paths), $milestones);
 
         return $this;
     }
@@ -414,6 +431,12 @@ class SessionReplayPlugin implements Plugin
     public function getSearchPeopleBy(): array
     {
         return $this->searchPeopleBy;
+    }
+
+    /** @return array<string, list<string>> */
+    public function getMilestones(): array
+    {
+        return $this->milestones;
     }
 
     public function getNavigationGroup(): string|UnitEnum|null

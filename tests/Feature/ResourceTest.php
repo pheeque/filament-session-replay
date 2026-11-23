@@ -92,6 +92,43 @@ it('lets a registered policy decide without a gate, which is how Shield plugs in
     $this->get(ReplaySessionResource::getUrl('view', ['record' => $session]))->assertForbidden();
 });
 
+it('badges, filters and names the milestones a recording reached', function () {
+    Gate::define('viewSessionReplay', fn ($user) => true);
+    SessionReplayPlugin::get()->milestones(['Pricing' => '/pricing', 'Paid' => ['/checkout/success*', '/thanks']]);
+
+    $now = now()->getTimestampMs();
+    $page = fn (string $path): array => ['type' => 'navigation', 'label' => $path, 'at' => $now];
+
+    $browsed = $this->recording(markers: [$page('/pricing/compare'), $page('/pricing_old')]);
+    $looked = $this->recording(markers: [$page('/pricing')]);
+    $paid = $this->recording(markers: [$page('/pricing'), $page('/checkout/success/42')]);
+    // A paid path that is not a page view: a failed request to it reached nothing.
+    $failed = $this->recording(markers: [['type' => 'request', 'label' => '/thanks', 'at' => $now]]);
+
+    $this->actingAs($this->user());
+
+    Livewire::test(ListReplaySessions::class)
+        ->assertTableColumnStateSet('milestones', ['Pricing'], $looked)
+        ->assertTableColumnStateSet('milestones', ['Pricing', 'Paid'], $paid)
+        ->assertTableColumnStateSet('milestones', null, $browsed)
+        ->assertTableColumnStateSet('milestones', null, $failed)
+        ->filterTable('milestone', 'Paid')->assertCanSeeTableRecords([$paid])->assertCanNotSeeTableRecords([$looked, $browsed, $failed])->resetTableFilters()
+        ->filterTable('milestone', 'Pricing')->assertCanSeeTableRecords([$looked, $paid])->assertCanNotSeeTableRecords([$browsed, $failed]);
+
+    $this->get(ReplaySessionResource::getUrl('view', ['record' => $paid]))->assertOk()->assertSeeInOrder(['Milestones', 'Pricing', 'Paid']);
+    expect(ReplaySessionResource::reachedMilestones(ReplaySession::query()->findOrFail($looked->id)))->toBe(['Pricing']);
+});
+
+it('leaves the milestones out until the panel names some', function () {
+    Gate::define('viewSessionReplay', fn ($user) => true);
+    $session = $this->recording(markers: [['type' => 'navigation', 'label' => '/pricing', 'at' => now()->getTimestampMs()]]);
+
+    $this->actingAs($this->user());
+
+    Livewire::test(ListReplaySessions::class)->assertTableColumnHidden('milestones')->assertTableFilterHidden('milestone');
+    $this->get(ReplaySessionResource::getUrl('view', ['record' => $session]))->assertOk()->assertDontSee('Milestones');
+});
+
 it('lists recordings and filters them by what was marked', function () {
     Gate::define('viewSessionReplay', fn ($user) => true);
 

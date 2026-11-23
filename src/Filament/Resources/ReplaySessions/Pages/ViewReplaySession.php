@@ -89,6 +89,10 @@ class ViewReplaySession extends ViewRecord
                     TextEntry::make('impersonator')->label(__('Impersonated by'))
                         ->state(fn (ReplaySession $record): ?string => SessionReplayPlugin::get()->impersonatorLabel($record))
                         ->visible(fn (ReplaySession $record): bool => $record->impersonator_id !== null),
+                    TextEntry::make('milestones')->label(__('Milestones'))
+                        ->state(fn (ReplaySession $record): array => ReplaySessionResource::reachedMilestones($record))
+                        ->badge()->color('success')->placeholder('·')
+                        ->visible(fn (): bool => SessionReplayPlugin::get()->getMilestones() !== []),
                     TextEntry::make('entry_url')->label(__('First page'))->columnSpanFull()->copyable(),
                     TextEntry::make('truncated')->hiddenLabel()->columnSpanFull()->color('warning')
                         ->state(__('This recording reached its size limit and stops before the visit ended.'))
