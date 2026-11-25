@@ -43,6 +43,9 @@ class SessionReplayPlugin implements Plugin
 
     protected ?Closure $userUrlUsing = null;
 
+    /** @var array<string, array{label: string, options: array<string, string>|Closure|null}> */
+    protected array $shownProperties = [];
+
     protected ?Closure $tenantLabelUsing = null;
 
     /** @var list<string> */
@@ -152,6 +155,19 @@ class SessionReplayPlugin implements Plugin
     public function userUrlUsing(Closure $callback): static
     {
         $this->userUrlUsing = $callback;
+
+        return $this;
+    }
+
+    /**
+     * A recording property (SessionReplay::propertiesUsing()) as a column in the list, an entry on the watch page and
+     * a filter: a select of `options` (value => label, also how a value is shown) when given, a text match otherwise.
+     *
+     * @param  array<string, string>|Closure|null  $options
+     */
+    public function showProperty(string $key, string $label, array|Closure|null $options = null): static
+    {
+        $this->shownProperties[$key] = ['label' => $label, 'options' => $options];
 
         return $this;
     }
@@ -446,6 +462,29 @@ class SessionReplayPlugin implements Plugin
      *
      * @return list<string>
      */
+    /**
+     * @return array<string, array{label: string, options: array<string, string>|null}>
+     */
+    public function getShownProperties(): array
+    {
+        return array_map(fn (array $property): array => [
+            'label' => $property['label'],
+            'options' => $property['options'] === null ? null : (array) $this->evaluate($property['options']),
+        ], $this->shownProperties);
+    }
+
+    /** A property's value as shown: its option label when there is one. */
+    public function propertyLabel(ReplaySession $session, string $key): ?string
+    {
+        $value = $session->properties[$key] ?? null;
+
+        if (! is_scalar($value) || (string) $value === '') {
+            return null;
+        }
+
+        return $this->getShownProperties()[$key]['options'][(string) $value] ?? (string) $value;
+    }
+
     public function getSearchPeopleBy(): array
     {
         return $this->searchPeopleBy;

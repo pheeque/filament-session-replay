@@ -521,6 +521,11 @@ class ReplaySessionResource extends Resource
                     ->label(__('Device'))
                     ->formatStateUsing(fn (string $state): string => __(ucfirst($state)))
                     ->toggleable(),
+                ...array_map(fn (string $key): TextColumn => TextColumn::make('property_'.$key)
+                    ->label(SessionReplayPlugin::get()->getShownProperties()[$key]['label'])
+                    ->state(fn (ReplaySession $record): ?string => SessionReplayPlugin::get()->propertyLabel($record, $key))
+                    ->placeholder('·')
+                    ->toggleable(), array_keys(SessionReplayPlugin::get()->getShownProperties())),
                 TextColumn::make('entry_url')
                     ->label(__('First page'))
                     ->formatStateUsing(fn (string $state): string => static::shortUrl($state))
@@ -540,6 +545,7 @@ class ReplaySessionResource extends Resource
                     ->formatStateUsing(fn (int $state): string => Number::fileSize($state))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
+
             ])
             ->filters([
                 // One person's recordings: the deep link getUrlForPerson() builds (Account Switcher's banner lands
@@ -578,6 +584,18 @@ class ReplaySessionResource extends Resource
                     ->schema([TextInput::make('contains')->label(__('First page contains'))])
                     ->query(fn (Builder $query, array $data) => $query->when($data['contains'] ?? null, fn (Builder $query, string $value) => $query->where('entry_url', 'like', '%'.addcslashes($value, '%_\\').'%')))
                     ->indicateUsing(fn (array $data): ?string => ($data['contains'] ?? null) ? __('First page contains ":value"', ['value' => $data['contains']]) : null),
+                ...array_map(fn (string $key, array $property) => $property['options'] === null
+                    ? Filter::make('property_'.$key)
+                        ->schema([TextInput::make('value')->label($property['label'])])
+                        ->query(fn (Builder $query, array $data) => $query->when($data['value'] ?? null, fn (Builder $query, string $value) => $query->where('properties->'.$key, $value)))
+                        ->indicateUsing(fn (array $data): ?string => ($data['value'] ?? null) ? $property['label'].': '.$data['value'] : null)
+                    : SelectFilter::make('property_'.$key)
+                        ->label($property['label'])
+                        ->multiple()
+                        ->searchable()
+                        ->options($property['options'])
+                        ->query(fn (Builder $query, array $data) => $query->when($data['values'] ?? [], fn (Builder $query, array $values) => $query->whereIn('properties->'.$key, $values))),
+                    array_keys(SessionReplayPlugin::get()->getShownProperties()), SessionReplayPlugin::get()->getShownProperties()),
                 // Any page of the visit, not only the first: the navigation marker the recorder sets on every page.
                 Filter::make('visited')
                     ->schema([TextInput::make('contains')->label(__('Visited a page containing'))])

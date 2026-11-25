@@ -313,6 +313,30 @@ it('offers the export to whoever may watch, a policy without a gate included', f
     Livewire::test(ViewReplaySession::class, ['record' => $session->id])->assertActionVisible('export');
 });
 
+it('shows chosen properties as columns and watch-page entries, and filters by them', function () {
+    Gate::define('viewSessionReplay', fn ($user) => true);
+    SessionReplayPlugin::get()
+        ->showProperty('country', 'Country', ['NG' => 'Nigeria', 'DE' => 'Germany', 'GH' => 'Ghana'])
+        ->showProperty('ip', 'IP');
+
+    $lagos = $this->recording();
+    $lagos->forceFill(['properties' => ['panel' => 'admin', 'country' => 'NG', 'ip' => '102.89.1.2']])->save();
+    $berlin = $this->recording();
+    $berlin->forceFill(['properties' => ['panel' => 'admin', 'country' => 'DE', 'ip' => '102.89.1.20']])->save();
+    $unknown = $this->recording();
+
+    $this->actingAs($this->user());
+
+    Livewire::test(ListReplaySessions::class)
+        ->assertTableColumnStateSet('property_country', 'Nigeria', $lagos)
+        ->assertTableColumnStateSet('property_country', null, $unknown)
+        ->filterTable('property_country', ['NG', 'GH'])->assertCanSeeTableRecords([$lagos])->assertCanNotSeeTableRecords([$berlin, $unknown])->resetTableFilters()
+        // An exact match: one IP is not every IP that starts with it.
+        ->filterTable('property_ip', ['value' => '102.89.1.2'])->assertCanSeeTableRecords([$lagos])->assertCanNotSeeTableRecords([$berlin, $unknown]);
+
+    Livewire::test(ViewReplaySession::class, ['record' => $berlin->id])->assertSee('Germany')->assertSee('102.89.1.20');
+});
+
 it('links the watch page to the recorded person through userUrlUsing(), and not for a guest', function () {
     Gate::define('viewSessionReplay', fn ($user) => true);
     SessionReplayPlugin::get()->userUrlUsing(fn (ReplaySession $session) => '/people/'.$session->user_id);

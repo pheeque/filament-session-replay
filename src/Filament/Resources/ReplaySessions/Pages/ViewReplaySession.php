@@ -99,6 +99,9 @@ class ViewReplaySession extends ViewRecord
                         ->state(fn (ReplaySession $record): array => ReplaySessionResource::reachedMilestones($record))
                         ->badge()->color('success')->placeholder('·')
                         ->visible(fn (): bool => SessionReplayPlugin::get()->getMilestones() !== []),
+                    ...array_map(fn (string $key, array $property): TextEntry => TextEntry::make('property_'.$key)->label($property['label'])
+                        ->state(fn (ReplaySession $record): ?string => SessionReplayPlugin::get()->propertyLabel($record, $key))
+                        ->placeholder('·')->copyable(), array_keys(SessionReplayPlugin::get()->getShownProperties()), SessionReplayPlugin::get()->getShownProperties()),
                     TextEntry::make('entry_url')->label(__('First page'))->columnSpanFull()->copyable(),
                     TextEntry::make('truncated')->hiddenLabel()->columnSpanFull()->color('warning')
                         ->state(__('This recording reached its size limit and stops before the visit ended.'))

@@ -4,6 +4,7 @@ All notable changes to `packstub/filament-session-replay` are documented here.
 
 ## Unreleased
 
+- **Show your own recording properties:** `->showProperty('country', 'Country', $options)` adds a column, an entry on the watch page and a filter (a select with options, an exact match without)
 - **Milestones:** `->milestones(['Paid' => '/checkout/success*'])` badges the recordings that reached those pages, adds a **Reached** filter, and names them on the watch page
 - **Filter by any page visited:** the new **Visited a page containing** filter finds recordings that went through a page at any point, not only the first page
 - **Open the person from the watch page:** `->userUrlUsing(fn ($session) => ...)` adds an **Open user** button that links to their page in your panel
