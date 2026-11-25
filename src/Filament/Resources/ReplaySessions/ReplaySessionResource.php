@@ -578,6 +578,13 @@ class ReplaySessionResource extends Resource
                     ->schema([TextInput::make('contains')->label(__('First page contains'))])
                     ->query(fn (Builder $query, array $data) => $query->when($data['contains'] ?? null, fn (Builder $query, string $value) => $query->where('entry_url', 'like', '%'.addcslashes($value, '%_\\').'%')))
                     ->indicateUsing(fn (array $data): ?string => ($data['contains'] ?? null) ? __('First page contains ":value"', ['value' => $data['contains']]) : null),
+                // Any page of the visit, not only the first: the navigation marker the recorder sets on every page.
+                Filter::make('visited')
+                    ->schema([TextInput::make('contains')->label(__('Visited a page containing'))])
+                    ->query(fn (Builder $query, array $data) => $query->when($data['contains'] ?? null, fn (Builder $query, string $value) => $query->whereHas('markers', fn (Builder $markers) => $markers
+                        ->where('type', 'navigation')
+                        ->where('label', 'like', '%'.addcslashes($value, '%_\\').'%'))))
+                    ->indicateUsing(fn (array $data): ?string => ($data['contains'] ?? null) ? __('Visited ":value"', ['value' => $data['contains']]) : null),
                 Filter::make('started')
                     ->schema([DatePicker::make('from')->label(__('From')), DatePicker::make('until')->label(__('Until'))])
                     ->query(fn (Builder $query, array $data) => $query

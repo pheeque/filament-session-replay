@@ -52,6 +52,12 @@ class ViewReplaySession extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('user')
+                ->label(__('Open user'))
+                ->icon(Heroicon::OutlinedUser)
+                ->color('gray')
+                ->url(fn (ReplaySession $record): ?string => SessionReplayPlugin::get()->userUrl($record))
+                ->visible(fn (ReplaySession $record): bool => SessionReplayPlugin::get()->userUrl($record) !== null),
             AssistActions::offer(),
             AssistActions::openStageForSession(),
             ReplaySessionResource::pinAction(),

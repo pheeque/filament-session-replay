@@ -166,6 +166,8 @@ it('lists recordings and filters them by what was marked', function () {
     $watched = $this->recording(impersonator: '5');
     $reported = $this->recording(markers: [['type' => 'report', 'label' => 'Wrong total', 'at' => $now]]);
     $kept = $this->recording(attributes: ['pinned' => true, 'device' => 'mobile', 'entry_url' => 'https://app.test/admin/invoices/7']);
+    $wandered = $this->recording(markers: [['type' => 'navigation', 'label' => '/admin/orders', 'at' => $now], ['type' => 'navigation', 'label' => '/admin/invoices/9?tab=items', 'at' => $now + 1]]);
+    $errored = $this->recording(markers: [['type' => 'error', 'label' => 'Failed /admin/invoices/9', 'at' => $now]]);
 
     $this->actingAs($ada);
 
@@ -182,7 +184,8 @@ it('lists recordings and filters them by what was marked', function () {
         ->filterTable('impersonated')->assertCanSeeTableRecords([$watched])->assertCanNotSeeTableRecords([$broken])->resetTableFilters()
         ->filterTable('pinned')->assertCanSeeTableRecords([$kept])->assertCanNotSeeTableRecords([$broken])->resetTableFilters()
         ->filterTable('device', 'mobile')->assertCanSeeTableRecords([$kept])->assertCanNotSeeTableRecords([$broken])->resetTableFilters()
-        ->filterTable('url', ['contains' => 'invoices'])->assertCanSeeTableRecords([$kept])->assertCanNotSeeTableRecords([$broken])->resetTableFilters()
+        ->filterTable('url', ['contains' => 'invoices'])->assertCanSeeTableRecords([$kept])->assertCanNotSeeTableRecords([$broken, $wandered])->resetTableFilters()
+        ->filterTable('visited', ['contains' => 'invoices/9'])->assertCanSeeTableRecords([$wandered])->assertCanNotSeeTableRecords([$errored, $broken])->resetTableFilters()
         ->searchTable((string) $ada->id)->assertCanSeeTableRecords([$broken]);
 });
 
@@ -308,6 +311,21 @@ it('offers the export to whoever may watch, a policy without a gate included', f
     $this->actingAs($this->user(['is_staff' => true]));
 
     Livewire::test(ViewReplaySession::class, ['record' => $session->id])->assertActionVisible('export');
+});
+
+it('links the watch page to the recorded person through userUrlUsing(), and not for a guest', function () {
+    Gate::define('viewSessionReplay', fn ($user) => true);
+    SessionReplayPlugin::get()->userUrlUsing(fn (ReplaySession $session) => '/people/'.$session->user_id);
+
+    $grace = $this->user(['email' => 'grace@example.com']);
+    $hers = $this->recording($grace);
+    $guest = $this->recording();
+    $guest->forceFill(['user_type' => null, 'user_id' => null])->save();
+
+    $this->actingAs($grace);
+
+    Livewire::test(ViewReplaySession::class, ['record' => $hers->id])->assertActionVisible('user')->assertActionHasUrl('user', '/people/'.$grace->getKey());
+    Livewire::test(ViewReplaySession::class, ['record' => $guest->id])->assertActionHidden('user');
 });
 
 it('exports only the stylesheets the recording points at, as the core serves them', function () {

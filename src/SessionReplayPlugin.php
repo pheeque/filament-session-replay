@@ -41,6 +41,8 @@ class SessionReplayPlugin implements Plugin
 
     protected ?Closure $userLabelUsing = null;
 
+    protected ?Closure $userUrlUsing = null;
+
     protected ?Closure $tenantLabelUsing = null;
 
     /** @var list<string> */
@@ -142,6 +144,14 @@ class SessionReplayPlugin implements Plugin
     public function userLabelUsing(Closure $callback): static
     {
         $this->userLabelUsing = $callback;
+
+        return $this;
+    }
+
+    /** Where the recorded person's own page is, for an "Open user" link on the watch page: fn (ReplaySession $session): ?string. */
+    public function userUrlUsing(Closure $callback): static
+    {
+        $this->userUrlUsing = $callback;
 
         return $this;
     }
@@ -373,6 +383,13 @@ class SessionReplayPlugin implements Plugin
         }
 
         return $this->personLabel($session->user, $session->user_id);
+    }
+
+    public function userUrl(ReplaySession $session): ?string
+    {
+        $url = $this->userUrlUsing === null || $session->user_id === null ? null : ($this->userUrlUsing)($session);
+
+        return is_string($url) && $url !== '' ? $url : null;
     }
 
     /** Who impersonated the person, named like a person when the recording keeps a model, else #key; null when nobody did. */
