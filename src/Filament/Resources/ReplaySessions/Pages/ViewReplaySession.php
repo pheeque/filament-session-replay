@@ -83,6 +83,10 @@ class ViewReplaySession extends ViewRecord
                         ->badge(fn (ReplaySession $record): bool => $record->isLive())->color('success'),
                     TextEntry::make('page_count')->label(__('Pages')),
                     TextEntry::make('error_count')->label(__('Errors'))->badge()->color(fn (int $state): string => $state > 0 ? 'danger' : 'gray'),
+                    TextEntry::make('milestones')->label(__('Milestones'))
+                        ->state(fn (ReplaySession $record): array => ReplaySessionResource::reachedMilestones($record))
+                        ->badge()->color('success')->placeholder('·')
+                        ->visible(fn (): bool => SessionReplayPlugin::get()->getMilestones() !== []),
                     TextEntry::make('vitals')->label(__('Vitals'))
                         ->state(fn (ReplaySession $record): string => collect([
                             'LCP' => $record->lcp_ms === null ? null : $record->lcp_ms.' ms',
@@ -95,10 +99,6 @@ class ViewReplaySession extends ViewRecord
                     TextEntry::make('impersonator')->label(__('Impersonated by'))
                         ->state(fn (ReplaySession $record): ?string => SessionReplayPlugin::get()->impersonatorLabel($record))
                         ->visible(fn (ReplaySession $record): bool => $record->impersonator_id !== null),
-                    TextEntry::make('milestones')->label(__('Milestones'))
-                        ->state(fn (ReplaySession $record): array => ReplaySessionResource::reachedMilestones($record))
-                        ->badge()->color('success')->placeholder('·')
-                        ->visible(fn (): bool => SessionReplayPlugin::get()->getMilestones() !== []),
                     ...array_map(fn (string $key, array $property): TextEntry => TextEntry::make('property_'.$key)->label($property['label'])
                         ->state(fn (ReplaySession $record): ?string => SessionReplayPlugin::get()->propertyLabel($record, $key))
                         ->placeholder('·')->copyable(), array_keys(SessionReplayPlugin::get()->getShownProperties()), SessionReplayPlugin::get()->getShownProperties()),
