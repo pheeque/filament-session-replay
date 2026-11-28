@@ -91,5 +91,15 @@
     "Starting a call from the Holler widget ends this assist. Put it on hold first to keep it.": "Un apel pornit din widgetul Holler încheie această asistență. Pune-o întâi în așteptare ca să o păstrezi.",
     "Nothing yet.": "Nimic încă.",
     "Milestones": "Repere",
-    "Reached": "Atins"
+    "Reached": "Atins",
+    "At least (seconds)": "Cel puțin (secunde)",
+    "At most (seconds)": "Cel mult (secunde)",
+    "Length: :min–:max s": "Durată: :min–:max s",
+    "Length: at least :min s": "Durată: cel puțin :min s",
+    "Length: at most :max s": "Durată: cel mult :max s",
+    "Save filters": "Salvează filtrele",
+    "Name": "Nume",
+    "Filters saved": "Filtre salvate",
+    "Delete \":name\"?": "Ștergi „:name”?",
+    "Delete :name": "Șterge :name"
 }

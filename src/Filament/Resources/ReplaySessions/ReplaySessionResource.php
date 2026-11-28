@@ -566,6 +566,21 @@ class ReplaySessionResource extends Resource
                         true: fn (Builder $query) => $query->where('error_count', '>', 0),
                         false: fn (Builder $query) => $query->where('error_count', 0),
                     ),
+                Filter::make('length')
+                    ->schema([
+                        TextInput::make('min')->label(__('At least (seconds)'))->integer()->minValue(0),
+                        TextInput::make('max')->label(__('At most (seconds)'))->integer()->minValue(0),
+                    ])
+                    ->query(fn (Builder $query, array $data) => $query->lasting(
+                        is_numeric($data['min'] ?? null) ? (int) $data['min'] : null,
+                        is_numeric($data['max'] ?? null) ? (int) $data['max'] : null,
+                    ))
+                    ->indicateUsing(fn (array $data): ?string => match (true) {
+                        filled($data['min'] ?? null) && filled($data['max'] ?? null) => __('Length: :min–:max s', ['min' => $data['min'], 'max' => $data['max']]),
+                        filled($data['min'] ?? null) => __('Length: at least :min s', ['min' => $data['min']]),
+                        filled($data['max'] ?? null) => __('Length: at most :max s', ['max' => $data['max']]),
+                        default => null,
+                    }),
                 Filter::make('poor_vitals')->label(__('Slow pages (poor vitals)'))->toggle()->query(fn (Builder $query) => $query->poorVitals()),
                 Filter::make('reported')->label(__('Reported a problem'))->toggle()->query(fn (Builder $query) => $query->reported()),
                 Filter::make('rage_clicks')->label(__('Rage clicks'))->toggle()->query(fn (Builder $query) => $query->where('rage_click_count', '>', 0)),

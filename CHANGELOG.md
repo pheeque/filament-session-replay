@@ -4,6 +4,8 @@ All notable changes to `packstub/filament-session-replay` are documented here.
 
 ## Unreleased
 
+- **Saved filters:** **Save filters** keeps the filters you have on under a name, and each saved one is a button above the list that puts them back in one click. Run `php artisan migrate` (new `replay_saved_filters` table)
+- **Filter by length:** the new **Length** filter finds recordings of at least or at most so many seconds, such as everything over 15 s
 - **Show your own recording properties:** `->showProperty('country', 'Country', $options)` adds a column, an entry on the watch page and a filter (a select with options, an exact match without)
 - **Milestones:** `->milestones(['Paid' => '/checkout/success*'])` badges the recordings that reached those pages, adds a **Reached** filter, and names them on the watch page
 - **Filter by any page visited:** the new **Visited a page containing** filter finds recordings that went through a page at any point, not only the first page
