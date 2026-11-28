@@ -91,5 +91,15 @@
     "Starting a call from the Holler widget ends this assist. Put it on hold first to keep it.": "Звонок из виджета Holler завершит эту помощь. Сначала поставьте её на удержание, чтобы сохранить.",
     "Nothing yet.": "Пока ничего.",
     "Milestones": "Этапы",
-    "Reached": "Достигнуто"
+    "Reached": "Достигнуто",
+    "At least (seconds)": "Не менее (секунд)",
+    "At most (seconds)": "Не более (секунд)",
+    "Length: :min–:max s": "Длительность: :min–:max с",
+    "Length: at least :min s": "Длительность: не менее :min с",
+    "Length: at most :max s": "Длительность: не более :max с",
+    "Save filters": "Сохранить фильтры",
+    "Name": "Название",
+    "Filters saved": "Фильтры сохранены",
+    "Delete \":name\"?": "Удалить «:name»?",
+    "Delete :name": "Удалить :name"
 }

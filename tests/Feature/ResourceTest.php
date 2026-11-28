@@ -1,5 +1,6 @@
 <?php
 
+use Filament\Actions\Testing\TestAction;
 use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Context;
@@ -9,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Packstub\SessionReplay\Facades\SessionReplay;
 use Packstub\SessionReplay\Filament\Actions\WatchLastSessionAction;
+use Packstub\SessionReplay\Filament\Models\SavedFilter;
 use Packstub\SessionReplay\Filament\Resources\ReplaySessions\Pages\ListReplaySessions;
 use Packstub\SessionReplay\Filament\Resources\ReplaySessions\Pages\ViewReplaySession;
 use Packstub\SessionReplay\Filament\Resources\ReplaySessions\ReplaySessionResource;
@@ -187,6 +189,58 @@ it('lists recordings and filters them by what was marked', function () {
         ->filterTable('url', ['contains' => 'invoices'])->assertCanSeeTableRecords([$kept])->assertCanNotSeeTableRecords([$broken, $wandered])->resetTableFilters()
         ->filterTable('visited', ['contains' => 'invoices/9'])->assertCanSeeTableRecords([$wandered])->assertCanNotSeeTableRecords([$errored, $broken])->resetTableFilters()
         ->searchTable((string) $ada->id)->assertCanSeeTableRecords([$broken]);
+});
+
+it('filters by length and keeps filter combinations a person saved, theirs alone, a click away', function () {
+    Gate::define('viewSessionReplay', fn ($user) => true);
+
+    $now = now()->getTimestampMs();
+    $lasting = fn (int $seconds, array $markers = []): ReplaySession => $this->recording(markers: $markers, attributes: ['started_at' => now()->subMinutes(5), 'last_activity_at' => now()->subMinutes(5)->addSeconds($seconds)]);
+
+    $short = $lasting(14);
+    $long = $lasting(15);
+    $longBroken = $lasting(90, [['type' => 'error', 'label' => 'Boom', 'at' => $now]]);
+
+    $this->actingAs($ada = $this->user());
+
+    $list = Livewire::test(ListReplaySessions::class)
+        ->assertActionHidden('saveFilters')
+        ->filterTable('length', ['min' => 15])->assertCanSeeTableRecords([$long, $longBroken])->assertCanNotSeeTableRecords([$short])
+        ->filterTable('length', ['max' => 15])->assertCanSeeTableRecords([$short, $long])->assertCanNotSeeTableRecords([$longBroken])
+        ->filterTable('length', ['min' => 15])->filterTable('errors', true)
+        ->callAction('saveFilters', ['name' => 'Long with errors'])
+        ->assertHasNoActionErrors()
+        ->resetTableFilters()
+        ->assertCanSeeTableRecords([$short, $long, $longBroken]);
+
+    $saved = SavedFilter::query()->sole();
+
+    expect($saved->name)->toBe('Long with errors')
+        ->and($saved->owner_id)->toBe((string) $ada->id);
+
+    $list->assertSee('Long with errors')
+        ->call('applySavedFilter', $saved->id)
+        ->assertSet('savedFilter', $saved->id)
+        ->assertCanSeeTableRecords([$longBroken])->assertCanNotSeeTableRecords([$short, $long])
+        ->filterTable('errors', false)
+        ->assertSet('savedFilter', null);
+
+    // Someone else neither sees nor applies it.
+    $this->actingAs($this->user());
+
+    Livewire::test(ListReplaySessions::class)
+        ->assertDontSee('Long with errors')
+        ->call('applySavedFilter', $saved->id)
+        ->assertCanSeeTableRecords([$short, $long, $longBroken])
+        ->callAction(TestAction::make('deleteSavedFilter')->arguments(['id' => $saved->id]));
+
+    expect($saved->fresh())->not->toBeNull();
+
+    $this->actingAs($ada);
+
+    Livewire::test(ListReplaySessions::class)->callAction(TestAction::make('deleteSavedFilter')->arguments(['id' => $saved->id]))->assertDontSee('Long with errors');
+
+    expect(SavedFilter::query()->exists())->toBeFalse();
 });
 
 it('names the impersonator like a person when the hook handed over a model, by key otherwise', function () {

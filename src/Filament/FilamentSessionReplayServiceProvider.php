@@ -20,7 +20,10 @@ class FilamentSessionReplayServiceProvider extends PackageServiceProvider
     {
         $package
             ->name('filament-session-replay')
-            ->hasViews('filament-session-replay');
+            ->hasViews('filament-session-replay')
+            ->discoversMigrations()
+            // Like the core's: auto-run unless the app runs the replay migrations centrally.
+            ->runsMigrations((bool) config('session-replay.run_migrations', true));
     }
 
     /** This provider sits one level below src/; package-tools resolves resources/ relative to what this returns. */

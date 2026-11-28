@@ -91,5 +91,15 @@
     "Starting a call from the Holler widget ends this assist. Put it on hold first to keep it.": "Iniciar una llamada desde el widget de Holler termina esta asistencia. Ponla antes en espera para conservarla.",
     "Nothing yet.": "Nada todavía.",
     "Milestones": "Hitos",
-    "Reached": "Alcanzado"
+    "Reached": "Alcanzado",
+    "At least (seconds)": "Al menos (segundos)",
+    "At most (seconds)": "Como máximo (segundos)",
+    "Length: :min–:max s": "Duración: :min–:max s",
+    "Length: at least :min s": "Duración: al menos :min s",
+    "Length: at most :max s": "Duración: como máximo :max s",
+    "Save filters": "Guardar filtros",
+    "Name": "Nombre",
+    "Filters saved": "Filtros guardados",
+    "Delete \":name\"?": "¿Eliminar «:name»?",
+    "Delete :name": "Eliminar :name"
 }
